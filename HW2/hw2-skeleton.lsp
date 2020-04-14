@@ -1,13 +1,3 @@
-(defun TEST(a b)
-  (print "--------")
-  (print a)
-  (print b)
-  (if (equal a b)
-    (print 'passed)
-    (print 'failed)
-  )
-)
-
 ; These functions implement a depth-first solver for the missionary-cannibal
 ; problem. In this problem, three missionaries and three cannibals are trying to
 ; go from the east side of a river to the west side. They have a single boat
@@ -37,7 +27,6 @@
 ; state or with an initial path.
 
 ; Examples of calls to some of the helper functions can be found after the code.
-
 
 
 ; FINAL-STATE takes a single argument s, the current state, and returns T if it
@@ -102,27 +91,12 @@
 ; NIL. 
 ; Note that the path should be ordered as: (S_n ... S_2 S_1 S_0)
 (defun mult-dfs (states path)
-  ;(print path)
   (cond
     ((null states) NIL)
-    ((final-state (first states)) (cons (first states) path))
-    ((on-path (first states) path) (mult-dfs (rest states) path))
-    ; take the first element of states, append it to path, then use succ-fn to create new states for this, 
-    ; then recursively call multi-dfs. If this isn't null, return it. Otherwise, recursively call multi-dfs
-    ; with rest of states
-    (t 
-      (let ((dfsearch (mult-dfs (succ-fn (first states)) (cons (first states) path))))
-        (if (null dfsearch) 
-          (mult-dfs (rest states) path)
-          dfsearch
-        )
-      )
-    )
+    ((mc-dfs (first states) path) (mc-dfs (first states) path))
+    (t (mult-dfs (rest states) path))
   )
 )
-
-;(print (succ-fn '(1 1 T)))
-; (print (mult-dfs (succ-fn '(1 1 T)) '((1 1 T))))
 
 ; MC-DFS does a depth first search from a given state to the goal state. It
 ; takes two arguments: a state (S) and the path from the initial state to S
@@ -133,24 +107,13 @@
 ; ensuring that the depth-first search does not revisit a node already on the
 ; search path.
 (defun mc-dfs (s path)
-  (mult-dfs (succ-fn s) (cons s path))
+  (cond 
+    ((final-state s) (cons s path))
+    ((on-path s path) NIL)
+    (t (mult-dfs (succ-fn s) (cons s path)))
+  )
 )
 
+;; -------------------------------------- ;;
+
 (print (mc-dfs '(3 3 T) NIL))
-
-
-; Function execution examples
-
-; Applying this operator would result in an invalid state, with more cannibals
-; than missionaries on the east side of the river.
-; (next-state '(3 3 t) 1 0) -> NIL
-
-; Applying this operator would result in one cannibal and zero missionaries on
-; the west side of the river, which is a legal operator. (NOTE that next-state
-; returns a LIST of successor states, even when there is only one successor)
-; (next-state '(3 3 t) 0 1) -> ((0 1 NIL))
-
-; succ-fn returns all of the legal states that can result from applying
-; operators to the current state.
-; (succ-fn '(3 3 t)) -> ((0 1 NIL) (1 1 NIL) (0 2 NIL))
-; (succ-fn '(1 1 t)) -> ((3 2 NIL) (3 3 NIL))
