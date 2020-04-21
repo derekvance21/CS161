@@ -129,7 +129,7 @@
 
 ;
 ; getKeeperPosition (s firstRow)
-; Returns a list indicating the position of the keeper (c r).
+; Returns a list indicating the position of the keeper (r c).
 ; 
 ; Assumes that the keeper is in row >= firstRow.
 ; The top row is the zeroth row.
@@ -140,7 +140,7 @@
 	(t (let ((x (getKeeperColumn (car s) 0)))
 	     (if x
 		 ;keeper is in this row
-		 (list x row)
+		 (list row x)
 		 ;otherwise move on
 		 (getKeeperPosition (cdr s) (+ row 1))
 		 );end if
@@ -212,12 +212,99 @@
 ; Any NIL result returned from try-move can be removed by cleanUpList.
 ; 
 ;
+(defun sizeof (LIST &optional (size 0))
+	(cond ((null LIST) size)
+		(t (sizeof (rest LIST) (1+ size)))
+	)
+)
+
+(defun get-square (s r c)
+	(cond
+		((or (>= r (sizeof s)) (>= c (sizeof (first s)))) wall)
+		(t (nth c (nth r s)))
+	)
+)
+
+(defun set-square-row (row c v)
+	(append 
+		(butlast row (- (sizeof row) c))
+		(list v)
+		(nthcdr (1+ c) row)
+	)
+)
+
+(defun set-square (s r c v)
+	(append
+		(butlast s (- (sizeof s) r))
+		(list (set-square-row (nth r s) c v))
+		(nthcdr (1+ r) s)
+	)
+)
+
+; returns the value of the square the keeper's moving into that originally had value val
+(defun move-new (val)
+	(cond ((isStar val) keeperstar) ((isBlank val) keeper))
+)
+
+; returns the value of the square the keeper's moving from that originally had value val
+(defun move-old (val)
+	(cond ((isKeeper val) blank) ((isKeeperStar val) star))
+)
+
+(defun box-move-new (val)
+	(cond ((isStar val) boxstar) ((isBlank val) box))
+)
+
+(defun box-move-old (val)
+	(cond ((isBox val) blank) ((isBoxStar val) star))
+)
+
+; helper function, takes a state s and two element integer list pos of form (r c) and returns the square there
+(defun get-short (s pos)
+	(get-square s (first pos) (second pos))
+)
+
+; d can be one of four directional values: up (-1, 0), right (0, 1), down (1, 0), left (0, -1)
+(defun try-move (s d)
+	(let* (
+		(keeper-pos (getKeeperPosition s 0))
+		(new-pos (list (+ (first keeper-pos) (first d)) (+ (second keeper-pos) (second d))))
+		(keeper-val (get-short s keeper-pos))
+		(new-val (get-short s new-pos)))
+		(cond
+			((isWall (get-short s new-pos)) NIL)
+			((or (isBox (get-short s new-pos)) (isBoxStar (get-short s new-pos)))
+				(let* ((new-new-pos (list (+ (first new-pos) (first d)) (+ (second new-pos) (second d)))) (new-new-val (get-short s new-new-pos)))
+					(cond
+						((or (isWall new-new-val) (isBox new-new-val) (isBoxStar new-new-val)) NIL)
+						(t 
+							(try-move 
+								(set-square 
+									(set-square s (first new-pos) (second new-pos) (box-move-old new-val))
+									(first new-new-pos) (second new-new-pos) (box-move-new new-new-val)
+								)
+								d
+							)
+						)
+					)
+				)
+			) ; keeper trying to move a box
+			(t 
+				(set-square 
+					(set-square s (first keeper-pos) (second keeper-pos) (move-old keeper-val)) ; s 
+					(first new-pos) (second new-pos) (move-new new-val) ; r c v
+				)
+			)
+		)
+	)
+)
+
 (defun next-states (s)
   (let* ((pos (getKeeperPosition s 0))
 	 (x (car pos))
 	 (y (cadr pos))
 	 ;x and y are now the coordinate of the keeper in s.
-	 (result nil)
+	 (result (list (try-move s '(-1 0)) (try-move s '(1 0)) (try-move s '(0 -1)) (try-move s '(0 1))))
 	 )
     (cleanUpList result);end
    );end let
@@ -233,8 +320,21 @@
 ; EXERCISE: Modify this function to compute the 
 ; number of misplaced boxes in s.
 ;
+(defun num-2s (s &optional (count 0))
+	(defun num-2s-row (row count)
+		(cond ((null row) count)
+			((isBox (first row)) (num-2s-row (rest row) (1+ count)))
+			(t (num-2s-row (rest row) count))
+		)
+	)
+	(cond ((null s) count)
+		(t (num-2s (rest s) (+ count (num-2s-row (first s) 0))))
+	)
+)
+
 (defun h1 (s)
-  )
+	(num-2s s)
+)
 
 ; EXERCISE: Change the name of this function to h<UID> where
 ; <UID> is your actual student ID number. Then, modify this 
@@ -262,6 +362,19 @@
  | 
  |#
 ;(6)
+(setq p0 '(
+	(0 0 0 0 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0)
+	(0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0 0 0)
+	(0 0 0 0 1 2 0 0 1 0 0 0 0 0 0 0 0 0 0)
+	(0 0 1 1 1 0 0 2 1 1 0 0 0 0 0 0 0 0 0)
+	(0 0 1 0 0 2 0 2 0 1 0 0 0 0 0 0 0 0 0)
+	(1 1 1 0 1 0 1 1 0 1 0 0 0 1 1 1 1 1 1)
+	(1 0 0 0 1 0 1 1 0 1 1 1 1 1 0 0 4 4 1)
+	(1 0 2 0 0 2 0 0 0 0 0 0 0 0 0 0 4 4 1)
+	(1 1 1 1 1 0 1 1 1 0 1 3 1 1 0 0 4 4 1)
+	(0 0 0 0 1 0 0 0 0 0 1 1 1 1 1 1 1 1 1)
+	(0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0)
+))
 (setq p1 '((1 1 1 1 1 1)
 	   (1 0 3 0 0 1)
 	   (1 0 2 0 0 1)
