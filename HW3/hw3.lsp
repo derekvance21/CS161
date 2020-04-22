@@ -186,6 +186,7 @@
 	)
 )
 
+; function returns T if the game state s is finished, i.e. no 2's or 3's left on the board
 (defun goal-test (s)
   	(cond ((null s) T) ; at end of state rows, no boxes or keepers found
 		((not (goal-row (first s))) NIL)
@@ -212,19 +213,23 @@
 ; Any NIL result returned from try-move can be removed by cleanUpList.
 ; 
 ;
+
+; function returns the number of elements in a list
 (defun sizeof (LIST &optional (size 0))
 	(cond ((null LIST) size)
 		(t (sizeof (rest LIST) (1+ size)))
 	)
 )
 
+; function returns the value of the square at row r and column c in game state s
 (defun get-square (s r c)
 	(cond
-		((or (>= r (sizeof s)) (>= c (sizeof (first s)))) wall)
+		((or (< r 0) (< c 0) (>= r (sizeof s)) (>= c (sizeof (first s)))) wall)
 		(t (nth c (nth r s)))
 	)
 )
 
+; function returns a list similar to row but where the cth element of row is replaced by v
 (defun set-square-row (row c v)
 	(append 
 		(butlast row (- (sizeof row) c))
@@ -233,6 +238,7 @@
 	)
 )
 
+; function returns a 2-d list similar to s but where the element in the rth row and cth column is replaced by v
 (defun set-square (s r c v)
 	(append
 		(butlast s (- (sizeof s) r))
@@ -251,10 +257,12 @@
 	(cond ((isKeeper val) blank) ((isKeeperStar val) star))
 )
 
+; returns the value of the square the box's moving to that originally had value val
 (defun box-move-new (val)
 	(cond ((isStar val) boxstar) ((isBlank val) box))
 )
 
+; returns the value of the square the box's moving from that originally had value val
 (defun box-move-old (val)
 	(cond ((isBox val) blank) ((isBoxStar val) star))
 )
@@ -265,11 +273,14 @@
 )
 
 ; d can be one of four directional values: up (-1, 0), right (0, 1), down (1, 0), left (0, -1)
+; returns the state that would result from moving the keeper in direction d. If resulting state is illegal, return NIL
+; If a box is in direction d from keeper, check if the box can also move in direction d, if not NIL, if yes, move the box in direction d
+; and recall try-move with the state s modified to reflect the box's movement.
 (defun try-move (s d)
 	(let* (
-		(keeper-pos (getKeeperPosition s 0))
-		(new-pos (list (+ (first keeper-pos) (first d)) (+ (second keeper-pos) (second d))))
-		(keeper-val (get-short s keeper-pos))
+		(curr-pos (getKeeperPosition s 0)) ; 
+		(new-pos (list (+ (first curr-pos) (first d)) (+ (second curr-pos) (second d))))
+		(curr-val (get-short s curr-pos))
 		(new-val (get-short s new-pos)))
 		(cond
 			((isWall (get-short s new-pos)) NIL)
@@ -291,7 +302,7 @@
 			) ; keeper trying to move a box
 			(t 
 				(set-square 
-					(set-square s (first keeper-pos) (second keeper-pos) (move-old keeper-val)) ; s 
+					(set-square s (first curr-pos) (second curr-pos) (move-old curr-val)) ; s 
 					(first new-pos) (second new-pos) (move-new new-val) ; r c v
 				)
 			)
@@ -299,6 +310,7 @@
 	)
 )
 
+; returns a list of the possible next states that could result from performing an action on state s
 (defun next-states (s)
   (let* ((pos (getKeeperPosition s 0))
 	 (x (car pos))
@@ -313,27 +325,30 @@
 ; EXERCISE: Modify this function to compute the trivial 
 ; admissible heuristic.
 ;
-(defun h0 (s)
-	0
-  )
+(defun h0 (s) 0)
 
 ; EXERCISE: Modify this function to compute the 
 ; number of misplaced boxes in s.
 ;
-(defun num-2s (s &optional (count 0))
-	(defun num-2s-row (row count)
+
+; num-boxes returns the number of boxes in state s
+(defun num-boxes (s &optional (count 0))
+	(defun num-boxes-row (row count)
 		(cond ((null row) count)
-			((isBox (first row)) (num-2s-row (rest row) (1+ count)))
-			(t (num-2s-row (rest row) count))
+			((isBox (first row)) (num-boxes-row (rest row) (1+ count)))
+			(t (num-boxes-row (rest row) count))
 		)
 	)
 	(cond ((null s) count)
-		(t (num-2s (rest s) (+ count (num-2s-row (first s) 0))))
+		(t (num-boxes (rest s) (+ count (num-boxes-row (first s) 0))))
 	)
 )
 
+; h1 returns as a heuristic the number of boxes not on a star
+; this function is admissible, as it will never overestimate the number of moves needed to finish the game
+; there will always be as many or more moves necessary to complete the game than there are un starred boxes
 (defun h1 (s)
-	(num-2s s)
+	(num-boxes s)
 )
 
 ; EXERCISE: Change the name of this function to h<UID> where
@@ -345,8 +360,88 @@
 ; The Lisp 'time' function can be used to measure the 
 ; running time of a function call.
 ;
-(defun hUID (s)
-  )
+
+; is-deadlock returns true if a box at boxpos is cornered by walls in s. I.e. a pair of walls orthogonal to each other are bordering the box
+(defun is-deadlock (s boxpos)
+	(let ((up (isWall (get-square s (1- (first boxpos)) (second boxpos))))
+		(down (isWall (get-square s (1+ (first boxpos)) (second boxpos))))
+		(right (isWall (get-square s (first boxpos) (1+ (second boxpos)))))
+		(left (isWall (get-square s (first boxpos) (1- (second boxpos)))))
+		)
+		(cond
+			((or (and up left) (and up right) (and down left) (and down right)) T)
+			(t NIL)
+		)
+	)
+)
+
+; returns an arbitrarily large heuristic value for deadlocks
+(defun deadlock-cost (if-deadlock)
+	(if if-deadlock 500 0)
+)
+
+; returns a list of positions (r c) of all the squares of value type in game state s
+(defun get-items (s type &optional (items NIL) (r 0))
+	(defun get-items-row (row type items r c)
+		(cond ((null row) items)
+			((= type (first row)) (get-items-row (rest row) type (cons (list r c) items) r (1+ c)))
+			(t (get-items-row (rest row) type items r (1+ c)))
+		)
+	)
+	(cond ((null s) items)
+		(t (get-items (rest s) type (append items (get-items-row (first s) type NIL r 0)) (1+ r)))
+	)
+)
+
+; helper function for hdeadlock
+(defun hdead-h (s boxes &optional (cost 0))
+	(cond ((null boxes) cost)
+		(t (hdead-h s (rest boxes) (+ cost (deadlock-cost (is-deadlock s (first boxes))))))
+	)
+)
+
+; heuristic function that returns the number of deadlocked boxes times an arbitrarily large number
+(defun hdeadlock (s)
+	(hdead-h s (get-items s 2))
+)
+
+; returns the manhattan distance between a (r c) pos1 and (r c) pos2
+(defun dist (pos1 pos2)
+	(+ 
+		(abs (- (first pos1) (first pos2))) ; x dist
+		(abs (- (second pos1) (second pos2))) ; y dist
+	)
+)
+
+; returns the minimum manhattan distance between a given box (position) and all the star positions in stars
+(defun min-dist-box (box stars &optional (minimum 10000))
+	(cond ((null stars) minimum)
+		(t (let ((box-to-star (dist box (first stars))))
+				(cond
+					((< box-to-star minimum) (min-dist-box box (rest stars) box-to-star))
+					(t (min-dist-box box (rest stars) minimum))
+				)
+			)
+		)
+	)
+)
+
+; returns the sum of the minimum distances between each box in boxes and stars
+(defun total-dist-boxes-to-stars (boxes stars &optional (sum 0))
+	(cond ((null boxes) sum)
+		(t (total-dist-boxes-to-stars (rest boxes) stars (+ sum (min-dist-box (first boxes) stars))))
+	)
+)
+
+; heuristic function that returns the sum of
+	; the number of deadlocked boxes times an arbitrarily large number
+	; the sum of manhattan distances for each box to its nearest star
+(defun h604970765 (s)
+	(+ 
+		(total-dist-boxes-to-stars (get-items s box) (get-items s star))
+		(hdeadlock s)
+	)
+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -375,6 +470,7 @@
 	(0 0 0 0 1 0 0 0 0 0 1 1 1 1 1 1 1 1 1)
 	(0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0)
 ))
+
 (setq p1 '((1 1 1 1 1 1)
 	   (1 0 3 0 0 1)
 	   (1 0 2 0 0 1)
@@ -517,6 +613,8 @@
 	    (0 0 0 0 1 0 1 4 0 1)
 	    (0 0 0 0 1 4 4 4 0 1)
 	    (0 0 0 0 1 1 1 1 1 1)))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
