@@ -8,8 +8,12 @@
 ; otherwise it returns NIL. (See spec for details.)
 ; param n: number of variables in delta
 ; param delta: a CNF represented as a list of lists
-(defun sat? (n delta)
-	...)
+
+
+;; (defun sat? (n delta)
+;;   (load "hw4.lsp")
+;;   (dfs n delta NIL '(1 -1))
+;; )
 
 
 
