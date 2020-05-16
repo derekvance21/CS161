@@ -13,47 +13,6 @@
   (load "hw6.lsp")
   );end defun
 
-; EXERCISE: Fill this function.
-; returns the index of the variable
-; that corresponds to the fact that 
-; "node n gets color c" (when there are k possible colors).
-;
-(defun node2var (n c k)
-  )
-
-; EXERCISE: Fill this function
-; returns *a clause* for the constraint:
-; "node n gets at least one color from the set {c,c+1,...,k}."
-;
-(defun at-least-one-color (n c k)
-  )
-
-; EXERCISE: Fill this function
-; returns *a list of clauses* for the constraint:
-; "node n gets at most one color from the set {c,c+1,...,k}."
-;
-(defun at-most-one-color (n c k)
-  )
-
-; EXERCISE: Fill this function
-; returns *a list of clauses* to ensure that
-; "node n gets exactly one color from the set {1,2,...,k}."
-;
-(defun generate-node-clauses (n k)
-  )
-
-; EXERCISE: Fill this function
-; returns *a list of clauses* to ensure that
-; "the nodes at both ends of edge e cannot have the same color from the set {1,2,...,k}."
-;
-(defun generate-edge-clauses (e k)
-  )
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Your exercises end here. Below are top-level
-; and utility functions that you do not need to understand.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; 
 ; Top-level function for converting the graph coloring problem
 ; of the graph defined in 'fname' using k colors into a SAT problem.

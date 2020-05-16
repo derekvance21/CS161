@@ -1,0 +1,76 @@
+1.
+(a) {x/A, y/A, z/B}
+(b) fail
+(c) {x/B, y/A}
+(d) {x/John, y/John}
+(e) fail
+
+2.
+John likes all kinds of food.
+(a) (Ax)(isFood(x))=>(likes(John, x))
+(b) ~(isFood(x))v(likes(John, x))
+
+Apples are food.
+(a) (Ax)(isApple(x))=>(isFood(x))
+(b) ~(isApple(x))v(isFood(x))
+
+Chicken is food.
+(a) (Ax)(isChicken(x))=>(isFood(x))
+(b) ~(isChicken(x))v(isFood(x))
+
+Anything someone eats and isn't killed by is food.
+(a) (Ax, Ey)((isPerson(y)^(eats(y,x))^~(killedBy(x, y)))=>(isFood(x))
+(b) (~(isPerson(y)))v(~(eats(y,x)))v(killedBy(y, x))v(isFood(x))
+
+If you are killed by something, you are not alive.
+(a) (Ax, y)((isPerson(y)^(killedBy(y,x)))=>(~(alive(y)))
+(b) (~(isPerson(y)))v(~(killedBy(y,x)))v(~(alive(y)))
+
+Bill eats peanuts and is still alive.
+(a) (eats(Bill, peanuts))^(alive(Bill))
+(b) (eats(Bill, peanuts))^(alive(Bill))
+
+Sue eats everything that Bill eats.
+(a) (Ax)(eats(Bill, x))=>(eats(Sue, x))
+(b) (~(eats(Bill, x)))v(eats(Sue, x))
+
+(c) Bill eats peanuts and is still alive.
+    If you are killed by something, you are not alive.
+    Thus, Bill was not killed by something.
+    Anything someone eats and isn't killed by is food.
+    Thus, peanuts are food.
+    John likes all kinds of food.
+    Thus, John eats peanuts.
+
+(d) Sue eats everything Bill eats.
+    Bill eats peanuts are is still alive.
+    Thus, Sue eats peanuts.
+
+(e) Bill is alive.
+    If you are killed by something, you are not alive.
+    Thus, Bill was not killed by something.
+    If you die, you are not alive.
+    Thus, Bill has not died.
+    If you don't eat, you die.
+    Thus, Bill eats.
+    Anything someone eats and isn't killed by is food.
+    Thus, Bill eats food.
+    Sue eats everything Bill eats.
+    Thus, Sue eats food.
+
+3. 
+(1) The instance with 3 colors is not satisfiable
+(2) The instance with 4 colors is satisfiable
+(3) The answers above show that the minimum number of colors to 
+color each node in graph.txt where no neighboring nodes have the same color 
+is 4 colors.
+A solution to the graph coloring problem could be:
+(node index): (color)
+1: Color 4
+2: Color 3
+3: Color 2
+4: Color 3
+5: Color 1
+6: Color 2
+7: Color 1
+(4) 8 colors is the minimum number of colors to properly color graph2.txt
